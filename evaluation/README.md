@@ -61,6 +61,18 @@ Once cloned, Git LFS will automatically handle the large files. If needed, you c
 git lfs pull
 ```
 
+## TCL Scripts
+
+The `tcl_scripts` folder contains TCL scripts used for evaluation. You can copy the scripts from the GitHub repository:
+
+```sh
+# Clone or download the tcl_scripts folder from:
+# https://github.com/UCLA-VAST/Prometheus/tree/main/evaluation/tcl_scripts
+# 
+# Then copy the contents to the evaluation folder, adjusting the path as needed:
+# cp -r <path_to_downloaded_tcl_scripts>/* <path_to_evaluation>/tcl_scripts/
+```
+
 ## Notes
 
 1. Ensure that both **AMPL Gurobi** and **AMD Vitis HLS** are properly installed and licensed on your system before attempting to run any scripts or workflows from this repository.
