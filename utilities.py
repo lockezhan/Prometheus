@@ -239,7 +239,8 @@ def add_pragma_scop(name_file):
     for k in range(len(lines)):
         if "for" in lines[k] and "void" not in lines[k]:
             for_ = True
-        if "int" in lines[k] and for_ == False:
+       # Make sure not to match "int" inside comments like " /* integers */"
+        if "int " in lines[k] and for_ == False and "*" not in lines[k] and "/" not in lines[k]:
             first_acc = k
         
     lines.insert(last_acc, "#pragma endscop\n")

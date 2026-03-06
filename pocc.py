@@ -136,8 +136,11 @@ def scop(folder, file_):
     # Run the POCC command to generate SCOP output
     res = utilities.launch(f"{POCC_CMD} {temp_file} --output-scop")
 
-    # Read the generated SCOP file
+    # Read the generated SCOP file, with a clearer error if missing
     scop_file = f"{temp_folder}/.tmp2{name_file}.pocc.c.scop"
+    if not os.path.exists(scop_file):
+        raise FileNotFoundError(f"POCC did not produce scop file: {scop_file}. POCC output: {' '.join(res)}")
+
     with open(scop_file, "r") as f:
         lines = f.readlines()
 

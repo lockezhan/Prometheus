@@ -12,11 +12,11 @@
  *   y[i] = sum_{j=0}^{BW-1}  val[i][j] * x[i + j]
  *
  * WHY this is AFFINE:
- *   - Loop bounds: i in [0, 256), j in [0, 7)  -> all constant integers ✓
- *   - val[i][j]: affine index (i, j) ✓
- *   - x[i+j]: i+j is a LINEAR COMBINATION of loop iterators ✓
- *   - y[i]: affine index (i only) ✓
- *   -> All accesses are affine functions of {i, j}. PoCC can analyze this. ✓
+ *   - Loop bounds: i in [0, 256), j in [0, 7)  -> all constant integers
+ *   - val[i][j]: affine index (i, j)
+ *   - x[i+j]: i+j is a LINEAR COMBINATION of loop iterators
+ *   - y[i]: affine index (i only)
+ *   -> All accesses are affine functions of {i, j}. PoCC can analyze this.
  *
  * Semantics: Represents a sparse matrix with at most 7 non-zeros per row,
  *            located on 3 consecutive lower and upper diagonals plus the main diagonal.
@@ -29,13 +29,13 @@ void kernel_nlp(float val[256][7], float x[262], float y[256])
 
   /* Initialize output */
   for (i = 0; i < 256; i++) {
-    y[i] = 0.0f;
+    y[i] = 0;
   }
 
-  /* Banded SpMV: y[i] += val[i][j] * x[i+j] */
+  /* Banded SpMV */
   for (i = 0; i < 256; i++) {
     for (j = 0; j < 7; j++) {
-      y[i] += val[i][j] * x[i + j];
+      y[i] = y[i] + val[i][j] * x[i + j];
     }
   }
 }

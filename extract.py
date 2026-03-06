@@ -97,57 +97,21 @@ def extract_variable_bounds(constraints):
     return lower_bounds, upper_bounds, lower_bounds_, upper_bounds_, trip_counts
 
 def compute_size_arrays(fil):
-    # Parse array sizes from function signature, supporting multi-line params and #define macros.
-    with open(fil, "r") as f:
-        lines = f.readlines()
-
-    defines = {}
-    for line in lines:
-        if line.startswith("#define"):
-            parts = line.split()
-            if len(parts) >= 3:
-                defines[parts[1]] = "".join(parts[2:])
-
-    content = "".join(lines)
-    content = re.sub(r"/\*.*?\*/", "", content, flags=re.S)
-    content = re.sub(r"//.*", "", content)
-
-    start_idx = content.find("void")
-    if start_idx == -1:
-        return {}
-
-    signature = content[start_idx:]
-    if "(" not in signature or ")" not in signature:
-        return {}
-
-    params = signature.split("(", 1)[1].split(")", 1)[0]
-    params = params.replace("const", "").replace("restrict", "").replace("volatile", "").replace("static", "")
-    for dtype in ["float", "int", "double", "long", "short", "unsigned", "signed", "char"]:
-        params = params.replace(dtype, "")
-    params = params.replace("*", "").replace("&", "")
-    params_list = [p.strip() for p in params.split(",") if p.strip()]
-
-    def resolve_expr(expr):
-        expr = expr.strip()
-        for name, val in defines.items():
-            expr = re.sub(rf"\b{name}\b", val, expr)
-        return int(eval(expr))
+    # FIXME
+    f = open(fil, "r")
+    lines = f.readlines()
+    f.close()
 
     size_arrays = {}
-    for elmt in params_list:
-        if "[" in elmt:
-            name = elmt.split("[")[0].strip()
-            size_part = elmt[elmt.index("[") + 1:].rstrip("]")
-            size_tokens = size_part.split("][")
-            sizes = []
-            for token in size_tokens:
-                try:
-                    sizes.append(resolve_expr(token))
-                except Exception:
-                    pass
-            if sizes:
-                size_arrays[name] = sizes
-
+    for line in lines:
+        if "void" in line:
+            line = line.split("(")[-1].split(")")[0].replace("float", "").replace("int", "").replace("double", "").replace(" ", "").split(",")
+            for elmt in line:
+                if "[" in elmt:
+                    name = elmt.split("[")[0]
+                    size = elmt[elmt.index("[")+1:-1].split("][")
+                    size_arrays[name] = list(map(int, size))
+            break
     return size_arrays
 
 def extract_cte(scop, k):
