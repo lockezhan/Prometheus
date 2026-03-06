@@ -146,19 +146,20 @@ class AST:
         return arg.split("*")
 
     def compute_arrays_information(self):
+        valid_stats = [(i, s) for i, s in enumerate(self.statements) if "=" in s]
+
         all_arrays = []
-        for stat in self.statements:
-            if "=" in stat:
-                out, inp = stat.split("=")
-                out = out.strip().split("[")[0]
-                inp = self.multi_split(inp.strip().replace(";", "").replace(" ", ""), ["+", "-", "*", "/"], True)
-                all_arrays += [out] 
-                all_arrays += inp
+        for _, stat in valid_stats:
+            out, inp = stat.split("=")
+            out = out.strip().split("[")[0]
+            inp = self.multi_split(inp.strip().replace(";", "").replace(" ", ""), ["+", "-", "*", "/"], True)
+            all_arrays += [out]
+            all_arrays += inp
         all_arrays = unique_list_in_order(all_arrays)
 
         for arr in all_arrays:
             self.array_information[arr] = {"size": 0, "type": "", "W": [], "size_burst": 0, "size_vector": 0, "statements": [], "dim": 0, "loop_to_dim": {}, "part_per_dim": [], "size_per_dim": [], "iterators":{}, "polyhedron":{}, "intersection":{}, "polyhedron_size": {}, "access":{}}
-            for i, stat in enumerate(self.statements):
+            for i, stat in valid_stats:
                 out, inp = stat.split("=")
                 out = out.strip().split("[")[0]
                 if f"{arr}[" in stat:
@@ -173,8 +174,7 @@ class AST:
                 self.array_information[arr]["access"][id_stat] = []
                 self.array_information[arr]["intersection"][id_stat] = []
         for arr in all_arrays:
-            for id_stat in range(len(self.statements)):
-                stat = self.statements[id_stat]
+            for id_stat, stat in valid_stats:
                 out, inp = self.extract_array_and_constant(stat, False)
                 all_ = [out] + inp
                 for id_, al_ in enumerate(all_):
@@ -876,6 +876,8 @@ class AST:
         # FIXME need to be sure it is not read before
         self.dont_need_load = []
         for stat in self.statements:
+            if "=" not in stat:
+                continue
             out, inp = stat.split("=")
             out = out.strip().split("[")[0]
             inp = self.multi_split(inp.strip().replace(";", "").replace(" ", ""), ["+", "-", "*", "/"], True)
@@ -905,6 +907,8 @@ class AST:
         return res
 
     def extract_array(self, statement):
+        if "=" not in statement:
+            return "", []
         out = statement.split("=")[0]
         out = out.strip().split("[")[0]
         inp = statement.split("=")[1]
@@ -912,12 +916,13 @@ class AST:
         return out, inp
     
     def extract_array_and_constant(self, statement, remove_bracket=True):
+        if "=" not in statement:
+            return "", []
         out = statement.split("=")[0]
         if remove_bracket:
             out = out.strip().split("[")[0]
         else:
             if len(out) > 0 and "]" in out:
-
                 while out[-1] != "]":
                     out = out[:-1]
         inp = statement.split("=")[1]
@@ -1054,6 +1059,8 @@ class AST:
         loads = []
         writes = []
         for i, stat in enumerate(self.statements):
+            if "=" not in stat:
+                continue
             out, inp = stat.split("=")
             out = out.strip().split("[")[0]
             inp = self.multi_split(inp.strip().replace(";", "").replace(" ", ""), ["+", "-", "*", "/"], True)
@@ -1348,6 +1355,8 @@ class CodeGeneration:
             arr = arr.replace("[", "").replace("]", "")
             self.array_information[arr] = {"size": 0, "type": "", "W": [], "size_burst": 0, "size_vector": 0, "statements": [], "dim": 0, "loop_to_dim": {}, "part_per_dim": [], "size_per_dim": [], "iterators":{}, "polyhedron":{}, "intersection":{}, "polyhedron_size": {}, "access":{}}
             for i, stat in enumerate(self.statements):
+                if "=" not in stat:
+                    continue
                 out, inp = stat.split("=")
                 out = out.strip().split("[")[0]
                 if f"{arr}[" in stat:
@@ -1364,6 +1373,8 @@ class CodeGeneration:
         for arr in all_arrays:
             for id_stat in range(len(self.statements)):
                 stat = self.statements[id_stat]
+                if "=" not in stat:
+                    continue
                 out, inp = self.extract_array_and_constant(stat, False)
                 all_ = [out] + inp
                 for id_, al_ in enumerate(all_):

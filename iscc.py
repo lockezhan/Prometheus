@@ -6,7 +6,7 @@ import analysis
 import itertools
 
 
-ISCC_CMD = "/opt/polyopt/default/sources/polyopt-hls/pocc/math/barvinok/iscc"
+ISCC_CMD = "/opt/pocc/math/barvinok/iscc"
 # ISCC_CMD = "apptainer exec /opt/public/apptainer/pocc/pocc.sif iscc"
 
 class ISCC:
@@ -183,10 +183,25 @@ class ISCC:
             res = utilities.launch(f"{ISCC_CMD} < {self.folder}/iscc.iscc")
             res = ' '.join(res)
 
-            # if res.count("True") == 3:
-            RaW = eval(res.split("\"Does IslSchedule respects RaW deps?\" ")[-1].split(" ")[0].replace(" ", ""))
-            WaW = eval(res.split("\"Does IslSchedule respects WaW deps?\" ")[-1].split(" ")[0].replace(" ", ""))
-            WaR = eval(res.split("\"Does IslSchedule respects WaR deps?\" ")[-1].split(" ")[0].replace(" ", ""))
+            # Safely parse the three boolean answers printed by iscc, without using eval
+            def _parse_iscc_bool(full_output, marker):
+                if marker not in full_output:
+                    return False
+                tail = full_output.split(marker, 1)[1]
+                if not tail.strip():
+                    return False
+                token = tail.strip().split()[0].strip().strip(";").strip()
+                token_lower = token.lower()
+                # Accept common truthy spellings used by tools (True, true, 1, #t)
+                if token_lower in ("true", "1", "#t"):
+                    return True
+                if token_lower in ("false", "0", "#f"):
+                    return False
+                return False
+
+            RaW = _parse_iscc_bool(res, "\"Does IslSchedule respects RaW deps?\"")
+            WaW = _parse_iscc_bool(res, "\"Does IslSchedule respects WaW deps?\"")
+            WaR = _parse_iscc_bool(res, "\"Does IslSchedule respects WaR deps?\"")
 
 
             if RaW and WaW and WaR:

@@ -161,11 +161,11 @@ if __name__ == "__main__":
         if args.graph_partitioning:
             split = splitKernel.Identify("new.cpp", nlp_file, analysis, schedule, UB, LB, statements, iterators, output, headers, arguments, name_function, pragmas, pragmas_top)
             memoryBoundSplit.memoryBound(res, args.folder, split, "new.cpp", nlp_file, analysis, schedule, UB, LB, statements, iterators, output, headers, arguments, name_function, pragmas, pragmas_top)
-            os.system(f"cd {args.folder} && {AMPL_CMD} nlp.mod > nlp.log 2>&1")
+            utilities.run_ampl_py(args.folder, "nlp.mod", "nlp.log")
             splitKernel.splitKernel("new.cpp", nlp_file, analysis, schedule, UB, LB, statements, iterators, output, headers, arguments, name_function, pragmas, pragmas_top)
         else:
             memoryBound.memoryBound(res, args.folder, args.allow_multiple_transfer, args.ap_multiple_burst, "new.cpp", nlp_file, analysis, schedule, UB, LB, statements, iterators, output, headers, arguments, name_function, pragmas, pragmas_top)
-            os.system(f"cd {args.folder} && {AMPL_CMD} nlp.mod > nlp.log 2>&1")
+            utilities.run_ampl_py(args.folder, "nlp.mod", "nlp.log")
 
 
 
@@ -206,34 +206,3 @@ if __name__ == "__main__":
     if args.vitis:
         utilities.run_vitis_hls("vitis.tcl", f"{args.folder}/src")
         cycles, gf, DSP_utilization, BRAM_utilization, LUT_utilization, FF_utilization, URAM_utilization = utilities.print_summary(args.folder, args.file)
-        # need_to_be_relaunch = False
-        # if BRAM_utilization > 100 and DSP_utilization <= 100 and FF_utilization <= 100 and LUT_utilization <= 100:
-        #     ressource.ON_CHIP_MEM_SIZE = 0.70 * ressource.ON_CHIP_MEM_SIZE
-        #     need_to_be_relaunch = True
-        # elif DSP_utilization > 100 or BRAM_utilization > 100 or FF_utilization > 100 or LUT_utilization > 100:
-        #     if args.no_optimistic_reuse == True:
-        #         ressource.DSP = 0.50 * ressource.DSP
-        #     args.no_optimistic_reuse = True
-        #     need_to_be_relaunch = True
-
-        # if need_to_be_relaunch:
-        #     os.system(f"cp -r {args.folder} {args.folder}_overuse")
-        #     # Perform computation bound analysis
-        #     computationBound.computationBound(ressource, solver, nlp_file, args.no_tree_reduction, args.no_optimistic_reuse, args.timeout_nlp, analysis, schedule, UB, LB, statements, iterators, output_file, headers, arguments, function_name, pragmas, pragmas_top, optimize_burst)
-        #     # Run NLP optimization using AMPL
-        #     utilities.run_ampl(AMPL, args.folder)
-
-        #     # Process NLP log and model files
-        #     results, order_array = utilities.process_nlp_results(schedule, nlp_file, nlp_log)
-
-        #     # Generate final code and run CSIM
-        #     generate_code_computation.GenerateCodeComputation(args.folder, args.file, nlp_file, nlp_log)
-        #     generate_csim.CSIM(args.folder, args.file, f"{args.folder}/code_generated.cpp", args.no_tree_reduction, args.frequency, args.board)
-
-        #     post_pass.PostPass(fully_distributed_file, args.folder, f"{args.folder}/code_generated.cpp", nlp_file, nlp_log)
-        #     print("Files generated in", args.folder + "/")
-        #     utilities.run_vitis_hls("csim.tcl", args.folder)
-        #     utilities.run_vitis_hls("vitis.tcl", args.folder)
-        #     cycles, gf, DSP_utilization, BRAM_utilization, LUT_utilization, FF_utilization, URAM_utilization = utilities.print_summary(args.folder, args.file)
-
-    

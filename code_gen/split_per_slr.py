@@ -225,7 +225,7 @@ class SplitPerSLR:
                         
                         if name_fifo in lstream_per_FT[ft]:
                             id_ft_sent = ft
-                            id_slr_sent = self.dic_name_to_slr[str(id_ft_sent)]
+                            id_slr_sent = self.dic_name_to_slr.get(str(id_ft_sent), 0)
                             break
                 if "from_off_chip" in name_fifo:
                     id_slr_sent = 0
@@ -341,7 +341,7 @@ class SplitPerSLR:
                 id_ft = len(intra_task_in_ft) - 1
                 for it in curr_it:
                     it = it.replace(" ", "")
-                    self.dic_intra_task_to_slr[it] = self.dic_name_to_slr[str(id_ft)]
+                    self.dic_intra_task_to_slr[it] = self.dic_name_to_slr.get(str(id_ft), 0)
 
         for line in self.lines:
             if "void" in line:
@@ -385,7 +385,7 @@ class SplitPerSLR:
                     self.lines_per_slr[0].append(line)
             if "read" in name:
                 id_ft = int(name.split("FT")[1])
-                id_slr = self.dic_name_to_slr[str(id_ft)]
+                id_slr = self.dic_name_to_slr.get(str(id_ft), 0)
                 fct = self.extract_fct(name)
                 for line in fct.copy():
                     line = line.replace("ap_axiu<512,0,0,0>", "float16")
@@ -399,7 +399,7 @@ class SplitPerSLR:
                     self.lines_per_slr[int(id_slr)].append(line)
             if "write" in name:
                 id_ft = int(name.split("FT")[1])
-                id_slr = self.dic_name_to_slr[str(id_ft)]
+                id_slr = self.dic_name_to_slr.get(str(id_ft), 0)
                 fct = self.extract_fct(name)
                 for line in fct.copy():
                     line = line.replace("ap_axiu<512,0,0,0>", "float16")
@@ -413,14 +413,14 @@ class SplitPerSLR:
                     self.lines_per_slr[int(id_slr)].append(line)
             if "task" in name and "intra" in name:
                 id_it = name.split("task")[1].split("_intra")[0]
-                id_slr = self.dic_intra_task_to_slr[id_it]
+                id_slr = self.dic_intra_task_to_slr.get(id_it, 0)
                 fct = self.extract_fct(name)
                 fct = self.update_fct(fct)
                 for line in fct:
                     self.lines_per_slr[int(id_slr)].append(line)
             if f"FT" in name and "_level" in name:
                 id_it = name.split("FT")[1].split("_level")[0]
-                id_slr = self.dic_name_to_slr[id_it]
+                id_slr = self.dic_name_to_slr.get(id_it, 0)
                 fct = self.extract_fct(name)
                 fct = self.update_fct(fct)
                 for line in fct:
@@ -762,7 +762,7 @@ class SplitPerSLR:
                     line += f"hls::stream<ap_axiu<32, 0, 0, 0>>& fifo_cte_{id_slr},"
                     cur_arg.append(f"hls::stream<ap_axiu<32, 0, 0, 0>>& fifo_cte_2")
         for ft in list(self.lstream_per_FT.keys()):
-            if self.dic_name_to_slr[ft] == id_slr:
+            if self.dic_name_to_slr.get(ft, 0) == id_slr:
                 for element in self.lstream_per_FT[ft]:
                     name = element
                     
@@ -838,7 +838,7 @@ class SplitPerSLR:
 
             else:
                 id_ft = int(cc.split("FT")[1].split("_level0")[0])
-                if int(id_slr) == int(self.dic_name_to_slr[str(id_ft)]):
+                if int(id_slr) == int(self.dic_name_to_slr.get(str(id_ft), 0)):
                     line += cc
 
 

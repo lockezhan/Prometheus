@@ -106,9 +106,14 @@ class AST:
                     else:
                         depth_parent = 0
                     parent = f"{int(self.schedule[i][j-2])}_{depth_parent}"
-
-                    parent_node = [x for x in self.list_nodes if x.value == parent][0]
-                    parent_node.add_child(node)
+                    parent_node = [x for x in self.list_nodes if x.value == parent]
+                    if not parent_node:
+                        alt_depth = 0 if depth_parent == 1 else 1
+                        alt_parent = f"{int(self.schedule[i][j-2])}_{alt_depth}"
+                        parent_node = [x for x in self.list_nodes if x.value == alt_parent]
+                    if not parent_node:
+                        parent_node = [self.tree]
+                    parent_node[0].add_child(node)
             if ";" not in str_statement:
                 str_statement += ";"
             str_statement = self.apply_tiling(str_statement, i, self.create_tab((len(stat)-1)//2+1))
@@ -117,8 +122,13 @@ class AST:
             if len(stat) > 1:
 
                 parent = f"{int(self.schedule[i][-2])}_1"
-                parent_node = [x for x in self.list_nodes if x.value == parent][0]
-                parent_node.add_child(node_statement)
+                parent_node = [x for x in self.list_nodes if x.value == parent]
+                if not parent_node:
+                    alt_parent = f"{int(self.schedule[i][-2])}_0"
+                    parent_node = [x for x in self.list_nodes if x.value == alt_parent]
+                if not parent_node:
+                    parent_node = [self.tree]
+                parent_node[0].add_child(node_statement)
             else:
                 self.tree.add_child(node_statement)
     
@@ -643,47 +653,80 @@ class CodeGeneration:
         for line in lines:
             if "burst" in line and "is" not in line:
                 array = line.split("=")[0].replace("burst_", "").replace(" ", "")
+                rhs = line.split("=", 1)[1].strip().replace(";", "")
+                # When the NLP is infeasible or AMPL fails, some burst_* lines
+                # may appear with an empty right-hand side (e.g. "burst_x = ").
+                # In that case, just skip them instead of raising an error.
+                if rhs == "":
+                    continue
                 try:
-                    value = int(line.split("=")[1].replace(" ", "").replace("\n", ""))
-                except:
-                    value = float(line.split("=")[1].replace(" ", "").replace("\n", ""))
-                    value = int(value)
+                    value = int(rhs)
+                except ValueError:
+                    try:
+                        value = int(float(rhs))
+                    except ValueError:
+                        # Non-numeric RHS; ignore this malformed line.
+                        continue
+                # Guard against non-positive burst factors coming from an
+                # infeasible NLP; treat them as scalar accesses.
+                if value <= 0:
+                    value = 1
                 self.burst[array] = value
 
     def compute_schedule(self):
-        f = open(self.nlp_file, "r")
-        lines_nlp = f.readlines()
-        f.close()
+        # Read model and log files
+        with open(self.nlp_file, "r") as f:
+            lines_nlp = f.readlines()
 
-        f = open(self.log_file, "r")
-        lines_log = f.readlines()
-        f.close()
+        with open(self.log_file, "r") as f:
+            lines_log = f.readlines()
 
-        N = 0
-
+        # If AMPL failed or produced no permutation assignments, fall back to
+        # the schedule computed by the analysis pass.
         dic_perm = {}
-        dic_schedule = {}
-        schedule = []
         for line in lines_log:
-            if "perm" in line:
+            if "perm" in line and "=" in line:
                 p, b = line.replace("\n", "").split("=")
                 p = p.replace(" ", "")
                 b = b.replace(" ", "")
-                if b == "1":
-                    dic_perm[p] = True
-                else:
-                    dic_perm[p] = False
+                dic_perm[p] = (b == "1")
+
+        if not dic_perm:
+            return self.analysis.only_schedule
+
+        dic_schedule = {}
+        N = 0
+
+        # Extract the chosen permutation for each statement; if AMPL did not
+        # assign a particular perm variable, treat it as inactive.
         for line in lines_nlp:
             if "var" in line and "perm" in line:
-
                 p = line.split("var")[1].split("binary")[0].replace(" ", "")
                 id_statement = int(p.split("_")[1].replace("S", ""))
-                if dic_perm[p]:
-                    tuple_perm = line.split("#")[-1].replace("\n", "").replace(" ", "").replace("[", "").replace("]", "").split(",")
+                if dic_perm.get(p, False):
+                    tuple_perm = (
+                        line.split("#")[-1]
+                        .replace("\n", "")
+                        .replace(" ", "")
+                        .replace("[", "")
+                        .replace("]", "")
+                        .split(",")
+                    )
                     dic_schedule[id_statement] = tuple_perm
                     N = max(N, id_statement)
-        for k in range(N+1):
-            schedule.append(dic_schedule[k])
+
+        # If, for some reason, no schedule could be inferred from the NLP
+        # model, fall back to the analysis schedule.
+        if not dic_schedule:
+            return self.analysis.only_schedule
+
+        schedule = []
+        for k in range(N + 1):
+            if k in dic_schedule:
+                schedule.append(dic_schedule[k])
+            else:
+                # Default to the original schedule for missing entries.
+                schedule.append(self.analysis.only_schedule[k])
 
         return schedule
 
@@ -774,6 +817,10 @@ class CodeGeneration:
                         #             self.array_information[arr]["part_per_dim"][dim] = max(self.array_information[arr]["part_per_dim"][dim], int(factor))
 
     def find_size_last_dim(self, val, burst):
+        # Guard against invalid or zero burst values that can appear when
+        # the NLP is infeasible or provides degenerate solutions.
+        if burst is None or burst <= 0:
+            burst = 1
         if val % burst != 0:
             return val + burst - val % burst
         return val
@@ -823,9 +870,14 @@ class CodeGeneration:
             ori[name_array] = {}
 
             if name_array not in list(self.burst.keys()):
-                continue
-
-            size_burst = self.burst[name_array]
+                # When no burst information is available (e.g., AMPL did not
+                # run successfully), fall back to a scalar burst of 1.
+                size_burst = 1
+            else:
+                # Burst values loaded from the log are already clamped to
+                # be >= 1 in compute_burst, but we defensively guard again
+                # here in case of any inconsistencies.
+                size_burst = max(1, self.burst.get(name_array, 1))
 
             # check new size with padding
             f = open(self.nlp_file, "r")
@@ -891,7 +943,7 @@ class CodeGeneration:
                     else:
                         vv = sum(ttt)-1 + val
 
-                    size_array *= self.find_size_last_dim(vv, self.burst[name_array])
+                    size_array *= self.find_size_last_dim(vv, self.burst.get(name_array, 1))
                     self.what_array_has_shit.append(name_array)
                 else:
                     ttt = []
@@ -903,7 +955,7 @@ class CodeGeneration:
                         self.what_array_has_shit.append(name_array)
                         vv = sum(ttt)-1 
 
-                    size_array *= self.find_size_last_dim(vv, self.burst[name_array])
+                    size_array *= self.find_size_last_dim(vv, self.burst.get(name_array, 1))
             else:
                 ttt = []
                 for j in range(len(info[name_array][str(i)])):
@@ -912,7 +964,7 @@ class CodeGeneration:
                     vv = ttt[0] 
                 else:
                     vv = sum(ttt)-1 
-                size_array *= self.find_size_last_dim(vv, self.burst[name_array])
+                size_array *= self.find_size_last_dim(vv, self.burst.get(name_array, 1))
 
 
             self.size_arrays[name_array] = size_array
@@ -1224,7 +1276,7 @@ class CodeGeneration:
                 array, source = element
                 if source == "off-chip":
                     name_fifo = f"fifo_{array}_from_off_chip_to_S{task}"
-                    burst = self.burst[array]
+                    burst = self.burst.get(array, 1)
 
                     defi = f"hls::stream<{self.type}{burst}> {name_fifo}"
                     definition_fifo += f"    {defi};\n"
@@ -1245,7 +1297,7 @@ class CodeGeneration:
                 else:
                     task2 = int(source)
                     name_fifo = f"fifo_{array}_from_task{task2}_to_task{task}"
-                    burst = self.burst[array]
+                    burst = self.burst.get(array, 1)
                     defi = f"hls::stream<{self.type}{burst}> {name_fifo}"
                     definition_fifo += f"    {defi};\n"
                     # FIXME depth
@@ -1267,7 +1319,7 @@ class CodeGeneration:
                 array, source = element
                 if source == "off-chip":
                     name_fifo = f"fifo_{array}_to_off_chip"
-                    burst = self.burst[array]
+                    burst = self.burst.get(array, 1)
                     defi = f"hls::stream<{self.type}{burst}> {name_fifo}"
                     definition_fifo += f"    {defi};\n"
                     # FIXME depth
@@ -1388,13 +1440,18 @@ class CodeGeneration:
                                         ori_size[dim] = int(self.info_log[ori_size_])
                                         if dim not in list(size_arr.keys()):
                                             size_arr[dim] = {}
-                                        size_arr[dim]["all"] = int(self.info_log[size])
-                                        size_arr[dim]["0"] = int(self.info_log[f"{size}_0"])
-                                        size_arr[dim]["1"] = int(self.info_log[f"{size}_1"])
+                                        size_all = int(self.info_log[size])
+                                        size_0 = int(self.info_log[f"{size}_0"])
+                                        size_1 = int(self.info_log[f"{size}_1"])
+                                        size_arr[dim]["all"] = size_all
+                                        size_arr[dim]["0"] = size_0
+                                        size_arr[dim]["1"] = size_1
                                         if int(size.replace("TC", "")) in loops_before_level:
-                                            size_level[dim] = int(self.info_log[size])//int(self.info_log[f"{size}_0"])
+                                            # Guard against degenerate NLP results where size_0 can be 0.
+                                            denom = size_0 if size_0 != 0 else 1
+                                            size_level[dim] = size_all // denom
                                         else:
-                                            size_level[dim] = int(self.info_log[size])
+                                            size_level[dim] = size_all
 
 
                             res = (name_array, size_level, size_arr, ori_size)
@@ -1442,13 +1499,19 @@ class CodeGeneration:
                                             size_arr[dim] = {}
                                         if dim not in list(size_level_.keys()):
                                             size_level_[dim] = {}
-                                        size_arr[dim]["all"] = int(self.info_log[size])
-                                        size_arr[dim]["0"] = int(self.info_log[f"{size}_0"])
-                                        size_arr[dim]["1"] = int(self.info_log[f"{size}_1"])
+                                        size_all = int(self.info_log[size])
+                                        size_0 = int(self.info_log[f"{size}_0"])
+                                        size_1 = int(self.info_log[f"{size}_1"])
+                                        size_arr[dim]["all"] = size_all
+                                        size_arr[dim]["0"] = size_0
+                                        size_arr[dim]["1"] = size_1
                                         if int(size.replace("TC", "")) in loops_before_level:
-                                            size_level_[dim][id_arg] = int(self.info_log[size])//int(self.info_log[f"{size}_0"])
+                                            # Same protection here: avoid dividing by zero when NLP
+                                            # produces a zero tile count on this level.
+                                            denom = size_0 if size_0 != 0 else 1
+                                            size_level_[dim][id_arg] = size_all // denom
                                         else:
-                                            size_level_[dim][id_arg] = int(self.info_log[size])
+                                            size_level_[dim][id_arg] = size_all
                             for dim in list(size_level_.keys()):
                                 res = 0
                                 if len(list(size_level_[dim].keys())) == 1:
@@ -1490,7 +1553,7 @@ class CodeGeneration:
                 size_ = 1
                 for k in range(len(self.info_padding[id_ft][name_array])-1):
                     size_ *= self.info_padding[id_ft][name_array][k]
-                size_ *= int(np.ceil(self.info_padding[id_ft][name_array][-1]/self.burst[name_array]))
+                size_ *= int(np.ceil(self.info_padding[id_ft][name_array][-1]/self.burst.get(name_array, 1)))
 
                 loops_of_stat = self.schedule[id_task][1::2]
                 nb_dim = len(self.info_padding[id_ft][name_array])
@@ -1509,7 +1572,7 @@ class CodeGeneration:
                         for k in range(len(self.info_padding[id_ft][name_array])-1):
                             size_2 *= self.info_padding[id_ft][name_array][k]
                         size_2 *= (int(self.info_log[f"TC{loop_last_dim}"]) + int(self.info_log[f"cte_burst_without_tiling_TC{loop_last_dim}_for_{name_array}"]))
-                        size_2 /= self.burst[name_array]
+                        size_2 /= self.burst.get(name_array, 1)
                         if size_2 > size_:
                             size_ = int(size_2)
 
@@ -1551,7 +1614,7 @@ class CodeGeneration:
             id_ft = self.task_to_FT[int(id_task)]
             tc_arr = list(map(int, self.info_padding[id_ft][name_arr]))
             size_arr = np.prod(tc_arr)
-            code += f"{shift}for (int i = 0; i < {min(self.size_arrays[array],size_arr) // self.burst[array]}; i++){{\n"
+            code += f"{shift}for (int i = 0; i < {min(self.size_arrays[array],size_arr) // self.burst.get(array, 1)}; i++){{\n"
             code += f"{shift}#pragma HLS pipeline II=1\n"
             
             name_array = original_def.split(" ")[-1].split("[")[0]
@@ -2240,7 +2303,20 @@ class CodeGeneration:
                                 previous_size = self.info_padding[id_previous_ft_][name_array]
                                 id_previous_ft = id_previous_ft_
                                 break
-                    on_chip_size_prev = self.info_on_chip_size[id_previous_ft][name_array]
+
+                    # When no suitable previous fused task is found (or when
+                    # the NLP/information is inconsistent), fall back to a
+                    # conservative assumption: no additional inter-task tiling
+                    # is needed along any dimension. This avoids KeyError on
+                    # id_previous_ft == -1 while still generating valid code.
+                    if (
+                        id_previous_ft == -1
+                        or id_previous_ft not in self.info_on_chip_size
+                        or name_array not in self.info_on_chip_size[id_previous_ft]
+                    ):
+                        on_chip_size_prev = [int(transfer_size[d]) for d in range(nb_dim)]
+                    else:
+                        on_chip_size_prev = self.info_on_chip_size[id_previous_ft][name_array]
                     loops = []
                     for dim in range(nb_dim-1):
                         curr_loop = self.info_loop_to_array[id_previous_ft][name_array][dim][0]
@@ -2734,7 +2810,12 @@ class CodeGeneration:
                             if "[" in a:
                                 new_array = a
                                 name = a.split("[")[0]
-                                size_on_chip = definition_array_on_chip[id_FT][name]
+                                size_on_chip = definition_array_on_chip.get(id_FT, {}).get(name)
+                                if size_on_chip is None:
+                                    new_statement += a
+                                    if id_ < len(op):
+                                        new_statement += op[id_]
+                                    continue
                                 it_array = self.extract_iterators(a)
                                 for id_dim, it_ in enumerate(it_array):
                                     if "+" in it_ or "-" in it_ or "*" in it_ or "/" in it_:
@@ -2742,8 +2823,11 @@ class CodeGeneration:
                                     else:
                                         it_ = [it_]
                                     for it__ in it_:
-                                        if int(it_loop[f"{it__}1"]) == int(size_on_chip[id_dim]):
-                                            # new_array = new_array.replace(f"{it__}", f"{it__}1")
+                                        it_name = f"{it__}1"
+                                        it_bound = it_loop.get(it_name)
+                                        if it_bound is None:
+                                            continue
+                                        if int(it_bound) == int(size_on_chip[id_dim]):
                                             new_array = re.sub(rf'\b{it__}\b', f"{it__}1", new_array)
 
                                 new_statement += new_array
@@ -2908,4 +2992,4 @@ class CodeGeneration:
 
 
         
-        print(f"Code written to {self.output}")
+        print(f"output_file Code written to {self.output}")

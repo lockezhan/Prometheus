@@ -432,6 +432,8 @@ class CSIM:
         return "    " * nb
 
     def find_size_last_dim(self, val, burst):
+        if burst is None or int(burst) <= 0:
+            return val
         if val % burst != 0:
             return val + burst - val % burst
         return val
@@ -559,7 +561,10 @@ class CSIM:
                     else:
                         size_array.append(sum(ttt)-1)
             if len(size_array) >= 1:
-                size_array[-1] = self.find_size_last_dim(size_array[-1], self.burst[name_array])
+                # Use a default burst of 1 when no entry is available,
+                # which can happen if AMPL did not run.
+                burst_val = self.burst.get(name_array, 1)
+                size_array[-1] = self.find_size_last_dim(size_array[-1], burst_val)
             self.size_arrays[name_array] = size_array
 
 

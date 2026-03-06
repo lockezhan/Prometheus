@@ -7,6 +7,40 @@ import parse_vitis_report
 def run_ampl(AMPL, fold):
     os.system(f"cd {fold} && {AMPL} nlp.mod > nlp.log 2>&1")
 
+def run_ampl_py(folder, nlp_file="nlp.mod", nlp_log="nlp.log", lic_uuid=None):
+    """Run AMPL model using amplpy instead of an external ampl binary.
+
+    This expects that amplpy is installed and that either:
+    - lic_uuid is provided explicitly, or
+    - the AMPL_LIC_UUID environment variable is set.
+    """
+    from amplpy import AMPL, modules
+
+    if lic_uuid is None:
+        lic_uuid = os.environ.get("AMPL_LIC_UUID")
+    if lic_uuid is None:
+        raise RuntimeError("AMPL_LIC_UUID environment variable not set and no lic_uuid provided for run_ampl_py().")
+
+    # 使用 amplpy 调用 AMPL，并用 getOutput 捕获所有终端输出，
+    # 然后手动写入 nlp_log，这样可以 100% 保证 log 文件内容
+    # 和你在终端看到的一致，而无需依赖 AMPL 自己的 log_file 机制。
+    modules.activate(lic_uuid)
+    ampl = AMPL()
+
+    nlp_path = os.path.abspath(os.path.join(folder, nlp_file))
+    log_path = os.path.abspath(os.path.join(folder, nlp_log))
+
+    # AMPL 命令里路径要用双引号包裹，注意转义。
+    safe_nlp = nlp_path.replace("\\", "/").replace('"', '\\"')
+    cmd = f'model "{safe_nlp}";'
+
+    # 通过 getOutput 执行命令并抓取所有输出（包括 Gurobi 日志、display 结果等）。
+    out = ampl.getOutput(cmd)
+
+    # 把输出写到 nlp_log 文件中。
+    with open(log_path, "w") as f:
+        f.write(out)
+
 
 def process_nlp_results(schedule, nlp_file, nlp_log):
     with open(nlp_log, "r") as f:
@@ -68,6 +102,7 @@ def organize_files(folder, files_to_move):
 
 
 import subprocess
+import shutil
 
 def run_vitis_hls(tcl_file, path):
     """
@@ -80,7 +115,28 @@ def run_vitis_hls(tcl_file, path):
     Returns:
         None
     """
-    command = ["vitis_hls", tcl_file]
+
+    # 优先使用环境变量 HLS_CMD 指定的命令，例如：
+    #   export HLS_CMD="vitis-run --mode hls"
+    # 否则按顺序尝试：vitis_hls（旧版），vitis-run --mode hls（2025.1+）。
+    hls_cmd = os.environ.get("HLS_CMD")
+    cmd_parts = None
+    if hls_cmd:
+        cmd_parts = hls_cmd.split()
+    else:
+        if shutil.which("vitis_hls") is not None:
+            cmd_parts = ["vitis_hls"]
+        elif shutil.which("vitis-run") is not None:
+            # 新版 2025.1+：vitis-run --mode hls -f csim.tcl
+            cmd_parts = ["vitis-run", "--mode", "hls"]
+        else:
+            raise FileNotFoundError("No HLS command found: neither 'vitis_hls' nor 'vitis-run'. Set HLS_CMD to your HLS command, e.g. 'vitis-run --mode hls -f'.")
+
+    # vitis_hls 用 "vitis_hls tcl.tcl" 调用；vitis-run 需要 "vitis-run --mode hls --tcl tcl.tcl"。
+    if cmd_parts[0] == "vitis-run":
+        command = cmd_parts + ["--tcl", tcl_file]
+    else: 
+        command = cmd_parts + [tcl_file]
     
     try:
         # Execute the command
