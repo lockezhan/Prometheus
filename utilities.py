@@ -196,7 +196,7 @@ def delete_lines_containing(name_file, substrings):
     write_file(name_file, filtered_lines)
 
 def delete_pragma(name_file):
-    delete_lines_containing(name_file, ["#"])
+    delete_lines_containing(name_file, ["#pragma"])
 
 def delete_comment(name_file):
     lines = read_file(name_file)
@@ -226,25 +226,34 @@ def add_pragma_scop(name_file):
     lines = file_.readlines()
     file_.close()
     os.system(f"rm {name_file}")
+
+    # 找第一个 for 循环的行（不含 void，排除函数签名里的 for）
+    first_for = None
+    for k in range(len(lines)):
+        if "for" in lines[k] and "void" not in lines[k]:
+            first_for = k
+            break
+
+    # 找函数体最后一个 "}" 的行（作为 #pragma endscop 的插入位置）
     last_acc = 0
-    first_acc = 0
     for k in range(len(lines)):
         if "}" in lines[k]:
             last_acc = k
-    for k in range(len(lines)):
-        if "{" in lines[k] and lines[k].count("{") <= 1:
-            first_acc = k
-            break
-    for_ = False
-    for k in range(len(lines)):
-        if "for" in lines[k] and "void" not in lines[k]:
-            for_ = True
-       # Make sure not to match "int" inside comments like " /* integers */"
-        if "int " in lines[k] and for_ == False and "*" not in lines[k] and "/" not in lines[k]:
-            first_acc = k
-        
-    lines.insert(last_acc, "#pragma endscop\n")
-    lines.insert(first_acc+1, "#pragma scop\n")
+
+    if first_for is not None:
+        # #pragma endscop 先插（索引在后，先插不影响前面的索引）
+        lines.insert(last_acc, "#pragma endscop\n")
+        # #pragma scop 插到第一个 for 循环之前
+        lines.insert(first_for, "#pragma scop\n")
+    else:
+        # 没有 for 循环时，退回到原来的函数体开头插入方式
+        first_acc = 0
+        for k in range(len(lines)):
+            if "{" in lines[k] and lines[k].count("{") <= 1:
+                first_acc = k
+                break
+        lines.insert(last_acc, "#pragma endscop\n")
+        lines.insert(first_acc + 1, "#pragma scop\n")
 
     file_ = open(name_file, "w")
     for line in lines:

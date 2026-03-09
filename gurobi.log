@@ -5384,3 +5384,50 @@ Solution count 0
 
 Model is infeasible
 Best objective -, best bound -, gap -
+
+Gurobi 13.0.0 (linux64) logging started Fri Mar  6 13:19:14 2026
+
+Set parameter LogFile to value "gurobi.log"
+Set parameter OutputFlag to value 1
+Set parameter InfUnbdInfo to value 1
+Gurobi Optimizer version 13.0.0 build v13.0.0rc1 (linux64 - "Ubuntu 22.04.3 LTS")
+
+CPU model: Intel(R) Xeon(R) Gold 6338 CPU @ 2.00GHz, instruction set [SSE2|AVX|AVX2|AVX512]
+Thread count: 64 physical cores, 128 logical processors, using up to 32 threads
+
+Non-default parameters:
+TimeLimit  169200
+InfUnbdInfo  1
+LogToConsole  0
+NonConvex  2
+
+Optimize a model with 116 rows, 508 columns and 349 nonzeros (Min)
+Model fingerprint: 0x8c3a5248
+Model has 1 linear objective coefficients
+Model has 117 quadratic constraints
+Model has 24 simple general constraints
+  15 MAX, 9 MIN
+Model has 102 general nonlinear constraints (317 nonlinear terms)
+Variable types: 219 continuous, 289 integer (0 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 2e+01]
+  QMatrix range    [1e+00, 4e+02]
+  QLMatrix range   [1e+00, 4e+02]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 2e+06]
+  RHS range        [1e+00, 2e+01]
+  QRHS range       [3e+01, 3e+03]
+  NLCon coe range  [1e+00, 4e+02]
+Warning: 0 <= x < 1e-10 in domain of division.
+         Setting lower bound to 1e-10.
+Presolve added 37 rows and 0 columns
+Presolve removed 0 rows and 32 columns
+Presolve time: 0.00s
+
+Explored 0 nodes (0 simplex iterations) in 0.00 seconds (0.00 work units)
+Thread count was 1 (of 128 available processors)
+
+Solution count 0
+
+Model is infeasible
+Best objective -, best bound -, gap -
