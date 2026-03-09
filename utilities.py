@@ -227,10 +227,27 @@ def add_pragma_scop(name_file):
     file_.close()
     os.system(f"rm {name_file}")
 
-    # 找第一个 for 循环的行（不含 void，排除函数签名里的 for）
+    # 找第一个真正的 for 循环行：
+    #   - 必须匹配 "for (" 或 "for(" 这样的 for 语句语法
+    #   - 必须跳过多行注释块 /* ... */ 内的行
+    #   - 不含 void（排除函数签名）
     first_for = None
+    in_block_comment = False
     for k in range(len(lines)):
-        if "for" in lines[k] and "void" not in lines[k]:
+        stripped = lines[k].strip()
+        # 检测进入/退出多行注释块
+        if "/*" in stripped:
+            in_block_comment = True
+        if "*/" in stripped:
+            in_block_comment = False
+            continue
+        if in_block_comment:
+            continue
+        # 跳过单行注释
+        if stripped.startswith("//"):
+            continue
+        # 匹配真正的 for 语句（for( 或 for (），并排除函数签名
+        if re.search(r'\bfor\s*\(', lines[k]) and "void" not in lines[k]:
             first_for = k
             break
 
@@ -241,12 +258,12 @@ def add_pragma_scop(name_file):
             last_acc = k
 
     if first_for is not None:
-        # #pragma endscop 先插（索引在后，先插不影响前面的索引）
+        # 先插 #pragma endscop（在后面，先插不影响 first_for 的索引）
         lines.insert(last_acc, "#pragma endscop\n")
-        # #pragma scop 插到第一个 for 循环之前
+        # 再插 #pragma scop（在第一个 for 循环之前）
         lines.insert(first_for, "#pragma scop\n")
     else:
-        # 没有 for 循环时，退回到原来的函数体开头插入方式
+        # 没有 for 循环时，退回到函数体第一个 "{" 之后插入
         first_acc = 0
         for k in range(len(lines)):
             if "{" in lines[k] and lines[k].count("{") <= 1:
