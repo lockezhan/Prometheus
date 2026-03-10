@@ -5,8 +5,6 @@ void kernel_gemver(float alpha,float beta,float A[400][400],float u1[400],float 
 {
   int i;
   int j;
-{
-    
     
     
     for (i = 0; i < 400; i++) {
@@ -37,5 +35,5 @@ void kernel_gemver(float alpha,float beta,float A[400][400],float u1[400],float 
         w[i] = w[i] + alpha * A[i][j] * x[j];
       }
     }
-  }
+
 }

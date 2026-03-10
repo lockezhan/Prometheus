@@ -1,0 +1,219 @@
+Gurobi 13.0.0:   lim:time = 169200
+  tech:logfile = gurobi.log
+  qp:nonconvex = 2
+Gurobi 13.0.0: infeasible problem
+0 simplex iterations
+
+suffix dunbdd OUT;
+TC0 = 256
+
+TC1 = 256
+
+TC2 = 0
+
+is_fused_task0_in_SLR_0 = 0
+
+is_fused_task0_in_SLR_1 = 0
+
+is_fused_task0_in_SLR_2 = 0
+
+is_slr0_used = 0
+
+is_slr1_used = 0
+
+is_slr2_used = 0
+
+perm0_S0 = 1
+
+perm0_S1 = 1
+
+Lat_comp_S1_for_off_chip = 0
+
+perm1_S1 = 0
+
+Lat_comp_S0_intra_tile = 1
+
+Lat_comp_S1_intra_tile = 0
+
+footprint_y_S0_S1 = 0
+
+footprint_y_S0_S1_reuse = 0
+
+footprint_val_S1 = 0
+
+footprint_val_S1_reuse = 0
+
+Lat_comp_fused_S0_S1 = 0
+
+level_transfer_y_FT0_under0 = 0
+
+level_reuse_y_FT0_under0 = 0
+
+level_transfer_y_FT0_under1 = 1
+
+level_reuse_y_FT0_under1 = 1
+
+level_transfer_val_FT0_under0 = 0
+
+level_reuse_val_FT0_under0 = 0
+
+level_transfer_val_FT0_under1 = 0
+
+level_reuse_val_FT0_under1 = 0
+
+level_transfer_x_FT0_under0 = 0
+
+level_reuse_x_FT0_under0 = 1
+
+level_transfer_x_FT0_under1 = 0
+
+level_reuse_x_FT0_under1 = 0
+
+Lat_comp_fused_S0_S1_2 = 0
+
+Lat_comp_fused_S0_S1_1 = 0
+
+nb_dsp_used_SLR0 = 0
+
+nb_dsp_used_SLR1 = 0
+
+nb_dsp_used_SLR2 = 0
+
+TC0_0 = 0
+
+TC0_1 = 0
+
+TC1_0 = 0
+
+TC1_1 = 0
+
+TC2_0 = 0
+
+TC2_1 = 0
+
+val_is_fully_transfered_on_last_dim_FT0 = 0
+
+burst_val_is_1 = 0
+
+cte_0 = 0
+
+cte_burst_without_tiling_TC2_for_val = 0
+
+is_tc2_burst_witout_tiling_for_val = 0
+
+burst_val_is_2 = 0
+
+cte_1 = 0
+
+burst_val_is_4 = 0
+
+cte_2 = 0
+
+burst_val_is_8 = 0
+
+cte_3 = 0
+
+burst_val_is_16 = 0
+
+cte_4 = 0
+
+y_is_fully_transfered_on_last_dim_FT0 = 0
+
+burst_y_is_1 = 0
+
+cte_5 = 0
+
+cte_burst_without_tiling_TC0_for_y = 0
+
+is_tc0_burst_witout_tiling_for_y = 0
+
+cte_6 = 0
+
+cte_burst_without_tiling_TC1_for_y = 0
+
+is_tc1_burst_witout_tiling_for_y = 0
+
+cte_7 = 0
+
+burst_y_is_2 = 0
+
+cte_8 = 0
+
+cte_9 = 0
+
+cte_10 = 0
+
+burst_y_is_4 = 0
+
+cte_11 = 0
+
+cte_12 = 0
+
+cte_13 = 0
+
+burst_y_is_8 = 0
+
+cte_14 = 0
+
+cte_15 = 0
+
+cte_16 = 0
+
+burst_y_is_16 = 0
+
+cte_17 = 0
+
+cte_18 = 0
+
+cte_19 = 0
+
+x_is_fully_transfered_on_last_dim_FT0 = 0
+
+burst_x_is_1 = 0
+
+cte_20 = 0
+
+cte_burst_without_tiling_TC1_for_x = 0
+
+is_tc1_burst_witout_tiling_for_x = 0
+
+burst_x_is_2 = 0
+
+cte_21 = 0
+
+burst_x_is_4 = 0
+
+cte_22 = 0
+
+burst_x_is_8 = 0
+
+cte_23 = 0
+
+burst_x_is_16 = 0
+
+cte_24 = 0
+
+footprint_tot_val_FT0 = 0
+
+burst_val = 0
+
+footprint_tot_y_FT0 = 0
+
+burst_y = 0
+
+footprint_tot_x_FT0 = 0
+
+burst_x = 0
+
+Lat_comp_0_1 = 0
+
+obj = 0
+
+cte_tiling_0 = 0
+
+buffer_size = 0
+
+fifo_size = 0
+
+_total_solve_time = 0.06867
+

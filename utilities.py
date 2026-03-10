@@ -41,6 +41,11 @@ def run_ampl_py(folder, nlp_file="nlp.mod", nlp_log="nlp.log", lic_uuid=None):
     with open(log_path, "w") as f:
         f.write(out)
 
+    if "infeasible" in out.lower() or "objective" not in out.lower():
+        print("[错误日志] 求解器未能找到可行解 (Infeasible Problem)。\n很可能是由于您提供的约束（如 --ON_CHIP_MEM_SIZE 或其它资源限制）太小所导致。\n您可以到控制台检查输出或放宽参数重试！")
+        import sys
+        sys.exit(1)
+
 
 def process_nlp_results(schedule, nlp_file, nlp_log):
     with open(nlp_log, "r") as f:
@@ -133,7 +138,7 @@ def run_vitis_hls(tcl_file, path):
             raise FileNotFoundError("No HLS command found: neither 'vitis_hls' nor 'vitis-run'. Set HLS_CMD to your HLS command, e.g. 'vitis-run --mode hls -f'.")
 
     # vitis_hls 用 "vitis_hls tcl.tcl" 调用；vitis-run 需要 "vitis-run --mode hls --tcl tcl.tcl"。
-    if cmd_parts[0] == "vitis-run":
+    if "vitis-run" in cmd_parts[0] or (hls_cmd and "vitis-run" in hls_cmd):
         command = cmd_parts + ["--tcl", tcl_file]
     else: 
         command = cmd_parts + [tcl_file]
@@ -155,6 +160,8 @@ def run_vitis_hls(tcl_file, path):
     except subprocess.CalledProcessError as e:
         # Print error details
         print(f"Error while running {tcl_file}:")
+        print("Stdout Output:")
+        print(e.stdout)
         print("Error Output:")
         print(e.stderr)
         print("Return Code:", e.returncode)

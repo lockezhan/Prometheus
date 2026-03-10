@@ -1,0 +1,33 @@
+Domain := [] -> {
+    S0[i] : i >= 0 and i <= 255;
+    S1[i, j] : i >= 0 and i <= 255 and j >= 0 and j <= 6;
+};
+Read := [] -> {
+    S1[i, j] -> y[i];
+    S1[i, j] -> val[i][j];
+    S1[i, j] -> x[i+j];
+} * Domain;
+Write := [] -> {
+    S0[i] -> y[i];
+    S1[i, j] -> y[i];
+} * Domain;
+Schedule := [] -> {
+    S0[i] -> [0, i, 0];
+    S1[i, j] -> [1, i, 0, j, 0];
+};
+print Schedule;
+Before := Schedule << Schedule;
+RaW := (Write . (Read^-1)) * Before;
+WaW := (Write . (Write^-1)) * Before;
+WaR := (Read . (Write^-1)) * Before;
+IslSchedule := [] -> {
+    S0[i] -> [0, i, 0];
+    S1[i, j] -> [1, i, 0, j, 0];
+};
+IslBefore := IslSchedule << IslSchedule;
+print "Does IslSchedule respects RaW deps?";
+print RaW <= IslBefore;
+print "Does IslSchedule respects WaW deps?";
+print WaW <= IslBefore;
+print "Does IslSchedule respects WaR deps?";
+print WaR <= IslBefore;

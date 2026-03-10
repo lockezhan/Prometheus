@@ -798,7 +798,7 @@ class memoryBound:
                 if self.red_loop[loop]:
                     red_prod.append(f"TC{loop}_1")
             if len(red_prod) > 0:
-                constraints.append(f"Lat_comp_S{k}_intra_tile = IL_par_S{k} + IL_seq_S{k} * log({' * '.join(red_prod)})/log(2); # latency of the intra-tile S{k}")
+                constraints.append(f"Lat_comp_S{k}_intra_tile = IL_par_S{k} + IL_seq_S{k} * ({' * '.join(red_prod)}); # latency of the intra-tile S{k} (Wait: Tree reduction logarithmic term simplified to linear to avoid nonlinear infeasibility)")
             else:
                 constraints.append(f"Lat_comp_S{k}_intra_tile = IL_par_S{k} + IL_seq_S{k}; # latency of the intra-tile S{k}")
 
@@ -1549,6 +1549,7 @@ class memoryBound:
             cons_burst = []
             only_one = []
             last_dim = dim_array[array]-1
+            added_fully_cst = set()
             for last_dim_loop in self.info_arrays[array][last_dim]:
                 # last_dim_loop = self.info_arrays[array][last_dim][0]
                 last_stat = 0
@@ -1594,7 +1595,10 @@ class memoryBound:
                         cc.append(f"{str_} * ({' + '.join(ccc)})")
                 
 
-                constraints.append(f"{array}_is_fully_transfered_on_last_dim_FT{id_task} = {' + '.join(cc)}; # the array {array} is fully transfered on the last dimension")
+                sig = f"{array}_is_fully_transfered_on_last_dim_FT{id_task}"
+                if sig not in added_fully_cst:
+                    constraints.append(f"{sig} = {' + '.join(cc)}; # the array {array} is fully transfered on the last dimension")
+                    added_fully_cst.add(sig)
                 
             
             for k in [1,2,4,8,16]:
@@ -1780,6 +1784,7 @@ class memoryBound:
 
         in_last_dim = []
         all_loops = []
+        added_footprint_cst = set()
         for array in list(self.info_arrays.keys()):
             nb_time_call = len(self.info_arrays[array][0])
             for nb in range(nb_time_call):
@@ -1816,7 +1821,10 @@ class memoryBound:
                     if id_stat in dd:
                         id_fused_task = id_
                         break
-                constraints.append(f"footprint_tot_{array}_FT{id_fused_task} = {' * '.join(l)};")
+                sig = f"footprint_tot_{array}_FT{id_fused_task}"
+                if sig not in added_footprint_cst:
+                    constraints.append(f"{sig} = {' * '.join(l)};")
+                    added_footprint_cst.add(sig)
         all_loops = list(set(all_loops))
         for loop in all_loops:
             if loop not in in_last_dim:

@@ -2,7 +2,6 @@
 /*
  * Affine SpMV - Banded Sparse Matrix-Vector Multiplication
  *
-#pragma scop
  * Sparse matrix format: Banded (Diagonal) format
  *   - Matrix A is stored as val[M][BW] where:
  *       val[i][j] = A[i][i+j-BW/2]  (the j-th diagonal element of row i)
@@ -29,6 +28,7 @@ void kernel_nlp(float val[256][7], float x[262], float y[256])
   int j;
 
   /* Initialize output */
+#pragma scop
   for (i = 0; i < 256; i++) {
     y[i] = 0;
   }
