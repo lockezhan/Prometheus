@@ -1841,17 +1841,19 @@ class memoryBound:
                         if dim == len(list(self.info_arrays[array].keys()))-1:
 
 
+                            idx = min(nb, len(self.info_arrays[array][dim])-1)
                             burst_without_tiling_present = False
                             for v in var:
-                                if f"cte_burst_without_tiling_TC{self.info_arrays[array][dim][nb]}_for_{array}" in v:
+                                if f"cte_burst_without_tiling_TC{self.info_arrays[array][dim][idx]}_for_{array}" in v:
                                     burst_without_tiling_present = True
                             if burst_without_tiling_present:
-                                l.append(f"TC{self.info_arrays[array][dim][nb]}_0 * (TC{self.info_arrays[array][dim][nb]}_1 + cte_burst_without_tiling_TC{self.info_arrays[array][dim][nb]}_for_{array})")
+                                l.append(f"TC{self.info_arrays[array][dim][idx]}_0 * (TC{self.info_arrays[array][dim][idx]}_1 + cte_burst_without_tiling_TC{self.info_arrays[array][dim][idx]}_for_{array})")
                             else:
-                                l.append(f"TC{self.info_arrays[array][dim][nb]}")
-                            in_last_dim.append(self.info_arrays[array][dim][nb])
+                                l.append(f"TC{self.info_arrays[array][dim][idx]}")
+                            in_last_dim.append(self.info_arrays[array][dim][idx])
                         else:
-                            l.append(f"TC{self.info_arrays[array][dim][nb]}_ori")
+                            idx = min(nb, len(self.info_arrays[array][dim])-1)
+                            l.append(f"TC{self.info_arrays[array][dim][idx]}_ori")
 
                     last_sched = -1
                     curr_schedd = 0
@@ -1869,15 +1871,16 @@ class memoryBound:
                     if dim == len(list(self.info_arrays[array].keys()))-1:
                         if self.ap_multiple_burst:
                             # we need to make that loop which iterate the last dimension of array multiple of burst size
-                            var.append(f"cte_burst_TC{self.info_arrays[array][dim][nb]}_for_{array} integer >= 1;")
-                            constraints.append(f"TC{self.info_arrays[array][dim][nb]}_1 = burst_{array} * cte_burst_TC{self.info_arrays[array][dim][nb]}_for_{array};")
+                            idx = min(nb, len(self.info_arrays[array][dim])-1)
+                            var.append(f"cte_burst_TC{self.info_arrays[array][dim][idx]}_for_{array} integer >= 1;")
+                            constraints.append(f"TC{self.info_arrays[array][dim][idx]}_1 = burst_{array} * cte_burst_TC{self.info_arrays[array][dim][idx]}_for_{array};")
                 
                 
                 
                 id_fused_task = -1
                 id_stat = -1
-                if nb < len(self.info_arrays[array][dim]):
-                    target_loop = self.info_arrays[array][dim][nb]
+                if True:
+                    target_loop = self.info_arrays[array][0][nb]
                     for id_sched in range(len(self.schedule)):
                         loops = self.schedule[id_sched][1::2]
                         if target_loop in loops:
@@ -2338,7 +2341,8 @@ class memoryBound:
             for nb_call in range(len(self.info_arrays[arr][0])):
                 loops = []
                 for id_dim in list(self.info_arrays[arr].keys()):
-                    loops += [self.info_arrays[arr][id_dim][nb_call]]
+                    idx = min(nb_call, len(self.info_arrays[arr][id_dim])-1)
+                    loops += [self.info_arrays[arr][id_dim][idx]]
                 #find corresponding schedule
                 id_sched = -1
                 for id_sched2 in range(len(self.schedule)):

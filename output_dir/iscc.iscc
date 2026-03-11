@@ -1,0 +1,36 @@
+Domain := [] -> {
+    S0[i, j] : i >= 0 and i <= 79 and j >= 0 and j <= 79;
+    S1[i, k, j] : i >= 0 and i <= 79 and k >= 0 and k <= 59 and j >= 0 and j <= 79;
+};
+Read := [] -> {
+    S0[i, j] -> C[i][j];
+    S0[i, j] -> beta[0];
+    S1[i, k, j] -> C[i][j];
+    S1[i, k, j] -> alpha[0];
+    S1[i, k, j] -> A[i][k];
+    S1[i, k, j] -> A[j][k];
+} * Domain;
+Write := [] -> {
+    S0[i, j] -> C[i][j];
+    S1[i, k, j] -> C[i][j];
+} * Domain;
+Schedule := [] -> {
+    S0[i, j] -> [0, i, 0, j, 0];
+    S1[i, k, j] -> [1, i, 0, k, 0, j, 0];
+};
+print Schedule;
+Before := Schedule << Schedule;
+RaW := (Write . (Read^-1)) * Before;
+WaW := (Write . (Write^-1)) * Before;
+WaR := (Read . (Write^-1)) * Before;
+IslSchedule := [] -> {
+    S0[i, j] -> [0, i, 0, j, 0];
+    S1[i, k, j] -> [1, i, 0, k, 0, j, 0];
+};
+IslBefore := IslSchedule << IslSchedule;
+print "Does IslSchedule respects RaW deps?";
+print RaW <= IslBefore;
+print "Does IslSchedule respects WaW deps?";
+print WaW <= IslBefore;
+print "Does IslSchedule respects WaR deps?";
+print WaR <= IslBefore;

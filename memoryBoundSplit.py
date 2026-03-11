@@ -1793,26 +1793,28 @@ class memoryBound:
                     all_loops += self.info_arrays[array][dim]
                     if dim == len(list(self.info_arrays[array].keys()))-1:
 
-                        ori_tc = self.TC[self.info_arrays[array][dim][nb]]
+                        idx = min(nb, len(self.info_arrays[array][dim])-1)
+                        ori_tc = self.TC[self.info_arrays[array][dim][idx]]
 
                         burst_without_tiling_present = False
                         for v in var:
-                            if f"cte_burst_without_tiling_TC{self.info_arrays[array][dim][nb]}_for_{array}" in v:
+                            if f"cte_burst_without_tiling_TC{self.info_arrays[array][dim][idx]}_for_{array}" in v:
                                 burst_without_tiling_present = True
                         if burst_without_tiling_present:
-                            l.append(f"TC{self.info_arrays[array][dim][nb]}_0 * (TC{self.info_arrays[array][dim][nb]}_1 + cte_burst_without_tiling_TC{self.info_arrays[array][dim][nb]}_for_{array})")
+                            l.append(f"TC{self.info_arrays[array][dim][idx]}_0 * (TC{self.info_arrays[array][dim][idx]}_1 + cte_burst_without_tiling_TC{self.info_arrays[array][dim][idx]}_for_{array})")
                         else:
-                            l.append(f"TC{self.info_arrays[array][dim][nb]}")
-                        in_last_dim.append(self.info_arrays[array][dim][nb])
+                            l.append(f"TC{self.info_arrays[array][dim][idx]}")
+                        in_last_dim.append(self.info_arrays[array][dim][idx])
                     else:
-                        l.append(f"TC{self.info_arrays[array][dim][nb]}_ori")
-                    comments.append(f"Array {array} has for tc in dim {dim} TC{self.info_arrays[array][dim][nb]} (ori=TC{self.info_arrays[array][dim][nb]}_ori)")
+                        idx = min(nb, len(self.info_arrays[array][dim])-1)
+                        l.append(f"TC{self.info_arrays[array][dim][idx]}_ori")
+                    comments.append(f"Array {array} has for tc in dim {dim} TC{self.info_arrays[array][dim][idx]} (ori=TC{self.info_arrays[array][dim][idx]}_ori)")
                 
                 
                 
                 id_fused_task = -1
                 id_stat = -1
-                target_loop = self.info_arrays[array][dim][nb]
+                target_loop = self.info_arrays[array][0][nb]
                 for id_sched in range(len(self.schedule)):
                     loops = self.schedule[id_sched][1::2]
                     if target_loop in loops:
