@@ -572,7 +572,8 @@ class CSIM:
         need_many_def = {}
         for arg in new_arg:
             if "[" in arg:
-                name = self.extract_name(arg).replace("v", "").split("_for")[0]
+                name = self.extract_name(arg).split("_for")[0]
+                name = name[1:] if name.startswith("v") else name
                 if name in need_many_def:
                     need_many_def[name] += 1
                 else:
@@ -1164,7 +1165,8 @@ class CSIM:
             else:
                 name = ""
 
-            name_ = arg.split(" ")[-1].split("_")[0].replace("v", "").replace(" ", "")
+            name_ = arg.split(" ")[-1].split("_")[0].replace(" ", "")
+            name_ = name_[1:] if name_.startswith("v") else name_
             name += name_
             name_array = name.split(" ")[-1].replace(" ", "")
 
@@ -1230,7 +1232,8 @@ class CSIM:
             if data_type == "float" and "[" in arg:
                 name = f"({data_type}1 *) "
 
-            name_ = arg.split(" ")[-1].split("_")[0].replace("v", "").replace(" ", "")
+            name_ = arg.split(" ")[-1].split("_")[0].replace(" ", "")
+            name_ = name_[1:] if name_.startswith("v") else name_
             name += name_
             name_array = name.split(" ")[-1].replace(" ", "")
 

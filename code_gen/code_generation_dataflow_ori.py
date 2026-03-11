@@ -1129,7 +1129,8 @@ class CodeGeneration:
                     for arg in self.arguments:
                         if array in arg:
                             original_def = arg
-                            nname = arg.split(" ")[-1].split("[")[0].replace("v", "")
+                            nname = arg.split(" ")[-1].split("[")[0]
+                            nname = nname[1:] if nname.startswith("v") else nname
                             original_name = f"v{nname}_for_task{first_read[nname]}"
                             break
                     task_id = self.task_to_FT[task]
@@ -1315,7 +1316,8 @@ class CodeGeneration:
                 shift = "    "
                 id_task = int(original_name.split("for_task")[-1])
                 id_ft = self.task_to_FT[id_task]
-                name_array = original_name.split("_")[0].replace("v", "")
+                name_array = original_name.split("_")[0]
+                name_array = name_array[1:] if name_array.startswith("v") else name_array
 
                 size_ = 1
                 for k in range(len(self.info_padding[id_ft][name_array])-1):
@@ -1375,7 +1377,8 @@ class CodeGeneration:
             code += f"#pragma HLS inline off\n"
             shift = "    "
             # here if we have differend padding we need to check for each FT
-            name_arr = original_def.split(" ")[-1].split("[")[0].replace("v", "")
+            name_arr = original_def.split(" ")[-1].split("[")[0]
+            name_arr = name_arr[1:] if name_arr.startswith("v") else name_arr
             id_task = original_name.split("for_task")[-1]
             id_ft = self.task_to_FT[int(id_task)]
             tc_arr = list(map(int, self.info_padding[id_ft][name_arr]))
@@ -2208,7 +2211,7 @@ class CodeGeneration:
             if "]" in arg:
                 name = arg.split("[")[0].split(" ")[-1]
                 if name not in cur_array:
-                    cur_array += [name.replace("v", "")]
+                    cur_array += [name[1:] if name.startswith("v") else name]
         
         # info_arr = {}
         # first_read = {}
